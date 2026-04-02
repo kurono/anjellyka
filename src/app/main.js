@@ -30,9 +30,7 @@
     updateFpsMeter,
     updateStats,
     updateCanvasCursor,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
+    bindStageInteraction,
     drawSoftBody,
     drawDraft,
     drawHoverTarget,
@@ -151,16 +149,7 @@
     controls.togglePause.textContent = state.paused ? "Resume" : "Pause";
   });
   controls.resetBody.addEventListener("click", resetBody);
-
-  canvas.addEventListener("pointerdown", handlePointerDown);
-  canvas.addEventListener("pointermove", handlePointerMove);
-  canvas.addEventListener("pointerup", handlePointerUp);
-  canvas.addEventListener("pointercancel", handlePointerUp);
-  canvas.addEventListener("pointerleave", (event) => {
-    if (state.pointer.active && state.mode === "draw") {
-      handlePointerUp(event);
-    }
-  });
+  bindStageInteraction();
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
   window.addEventListener("resize", () => {

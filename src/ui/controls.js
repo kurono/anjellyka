@@ -51,13 +51,13 @@
 
     if (mode === "draw") {
       controls.modeHint.textContent =
-        "Draw mode: hold the pointer down and sketch a closed loop to append a new body.";
+        "Draw mode: press and sketch a closed loop to append a new body.";
     } else if (mode === "remove") {
       controls.modeHint.textContent =
-        "Remove mode: click inside a body on the canvas to delete it permanently.";
+        "Remove mode: tap or click inside a body on the canvas to delete it permanently.";
     } else {
       controls.modeHint.textContent =
-        "Preset mode: click or drag any body to grab it. Each spawn appends a new body.";
+        "Preset mode: drag any body with mouse or touch. Each spawn appends a new body.";
     }
 
     updateCanvasCursor();

@@ -298,6 +298,12 @@ input[type="range"]::-moz-range-thumb {
   height: 100%;
   flex: 1;
   display: block;
+  touch-action: none;
+  -ms-touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(8, 18, 28, 0.95), rgba(4, 10, 18, 0.98)),
@@ -309,6 +315,10 @@ input[type="range"]::-moz-range-thumb {
   .app-shell {
     height: auto;
     grid-template-columns: 1fr;
+  }
+
+  .stage-wrap {
+    order: -1;
   }
 
   .panel {

@@ -29,6 +29,108 @@
     clearGrab,
     updateCanvasCursor,
   } = app;
+  const LEGACY_MOUSE_POINTER_ID = 1;
+  const NON_PASSIVE_LISTENER = { passive: false };
+
+  /**
+   * Returns whether the event represents the primary contact we should use for
+   * single-pointer drag and draw gestures.
+   *
+   * @param {{ button?: number, isPrimary?: boolean }} event
+   * @returns {boolean}
+   */
+  function isPrimaryPointer(event) {
+    if (typeof event.button === "number" && event.button !== 0) {
+      return false;
+    }
+
+    if (typeof event.isPrimary === "boolean" && !event.isPrimary) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Prevents browser-native touch gestures from stealing the active interaction.
+   *
+   * @param {{ preventDefault?: Function }} event
+   */
+  function cancelNativeGesture(event) {
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+  }
+
+  /**
+   * Returns whether a real PointerEvent is available for pointer capture APIs.
+   *
+   * @param {Event} event
+   * @returns {boolean}
+   */
+  function isNativePointerEvent(event) {
+    return typeof PointerEvent !== "undefined" && event instanceof PointerEvent;
+  }
+
+  /**
+   * Creates a pointer-like event from a legacy mouse event.
+   *
+   * @param {MouseEvent} event
+   * @returns {PointerEvent}
+   */
+  function normalizeMouseEvent(event) {
+    return {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerId: LEGACY_MOUSE_POINTER_ID,
+      pointerType: "mouse",
+      button: event.button,
+      buttons: event.buttons,
+      isPrimary: true,
+      preventDefault: () => event.preventDefault(),
+    };
+  }
+
+  /**
+   * Creates a pointer-like event from a single changed touch.
+   *
+   * @param {TouchEvent} event
+   * @param {Touch} touch
+   * @returns {PointerEvent}
+   */
+  function normalizeTouchEvent(event, touch) {
+    return {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      pointerId: touch.identifier,
+      pointerType: "touch",
+      button: 0,
+      buttons: 1,
+      isPrimary: true,
+      preventDefault: () => event.preventDefault(),
+    };
+  }
+
+  /**
+   * Finds a touch entry by identifier within a TouchList-like collection.
+   *
+   * @param {TouchList} touchList
+   * @param {number | null} identifier
+   * @returns {Touch | null}
+   */
+  function findTouchByIdentifier(touchList, identifier) {
+    if (identifier == null || !touchList) {
+      return null;
+    }
+
+    for (let index = 0; index < touchList.length; index += 1) {
+      if (touchList[index].identifier === identifier) {
+        return touchList[index];
+      }
+    }
+
+    return null;
+  }
 
   /**
    * Converts a pointer event from viewport coordinates into canvas coordinates.
@@ -221,6 +323,11 @@
    * @param {PointerEvent} event
    */
   function handlePointerDown(event) {
+    if (!isPrimaryPointer(event) || state.pointer.active) {
+      return;
+    }
+
+    cancelNativeGesture(event);
     const position = getCanvasPoint(event);
 
     if (state.mode === "remove") {
@@ -239,7 +346,9 @@
     state.pointer.vx = 0;
     state.pointer.vy = 0;
 
-    canvas.setPointerCapture(event.pointerId);
+    if (isNativePointerEvent(event)) {
+      canvas.setPointerCapture(event.pointerId);
+    }
 
     if (state.mode === "draw") {
       beginDraw(position);
@@ -266,6 +375,14 @@
    * @param {PointerEvent} event
    */
   function handlePointerMove(event) {
+    if (state.pointer.active && state.pointer.id !== event.pointerId) {
+      return;
+    }
+
+    if (state.pointer.active || event.pointerType === "touch" || event.pointerType === "pen") {
+      cancelNativeGesture(event);
+    }
+
     const position = getCanvasPoint(event);
     const now = performance.now();
     const dt = Math.max(1 / 240, (now - state.pointer.lastMoveTime) / 1000);
@@ -303,7 +420,13 @@
    * @param {PointerEvent} event
    */
   function handlePointerUp(event) {
-    if (canvas.hasPointerCapture(event.pointerId)) {
+    if (!state.pointer.active || state.pointer.id !== event.pointerId) {
+      return;
+    }
+
+    cancelNativeGesture(event);
+
+    if (isNativePointerEvent(event) && canvas.hasPointerCapture(event.pointerId)) {
       canvas.releasePointerCapture(event.pointerId);
     }
 
@@ -316,6 +439,102 @@
     state.pointer.active = false;
     state.pointer.id = null;
     updateCanvasCursor();
+  }
+
+  /**
+   * Attaches stage interaction listeners with Pointer Events first and legacy
+   * mouse/touch fallbacks for browsers that still lack them.
+   */
+  function bindStageInteraction() {
+    if (window.PointerEvent) {
+      canvas.addEventListener("pointerdown", handlePointerDown, NON_PASSIVE_LISTENER);
+      canvas.addEventListener("pointermove", handlePointerMove, NON_PASSIVE_LISTENER);
+      canvas.addEventListener("pointerup", handlePointerUp, NON_PASSIVE_LISTENER);
+      canvas.addEventListener("pointercancel", handlePointerUp, NON_PASSIVE_LISTENER);
+      canvas.addEventListener("pointerleave", (event) => {
+        if (state.pointer.active && state.mode === "draw" && state.pointer.id === event.pointerId) {
+          handlePointerUp(event);
+          return;
+        }
+
+        if (!state.pointer.active && event.pointerType === "mouse") {
+          state.pointer.hovering = null;
+          updateCanvasCursor();
+        }
+      });
+      return;
+    }
+
+    canvas.addEventListener("mousedown", (event) => {
+      handlePointerDown(normalizeMouseEvent(event));
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!state.pointer.active && event.target !== canvas) {
+        return;
+      }
+
+      handlePointerMove(normalizeMouseEvent(event));
+    });
+
+    window.addEventListener("mouseup", (event) => {
+      handlePointerUp(normalizeMouseEvent(event));
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      if (state.pointer.active) {
+        return;
+      }
+
+      state.pointer.hovering = null;
+      updateCanvasCursor();
+    });
+
+    canvas.addEventListener(
+      "touchstart",
+      (event) => {
+        if (state.pointer.active) {
+          return;
+        }
+
+        const touch = event.changedTouches[0];
+        if (!touch) {
+          return;
+        }
+
+        handlePointerDown(normalizeTouchEvent(event, touch));
+      },
+      NON_PASSIVE_LISTENER
+    );
+
+    window.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!state.pointer.active) {
+          return;
+        }
+
+        const touch = findTouchByIdentifier(event.touches, state.pointer.id);
+        if (!touch) {
+          return;
+        }
+
+        handlePointerMove(normalizeTouchEvent(event, touch));
+      },
+      NON_PASSIVE_LISTENER
+    );
+
+    const finishTouchInteraction = (event) => {
+      const touch = findTouchByIdentifier(event.changedTouches, state.pointer.id);
+      if (!touch) {
+        return;
+      }
+
+      handlePointerUp(normalizeTouchEvent(event, touch));
+    };
+
+    window.addEventListener("touchend", finishTouchInteraction, NON_PASSIVE_LISTENER);
+    window.addEventListener("touchcancel", finishTouchInteraction, NON_PASSIVE_LISTENER);
   }
 
   Object.assign(app, {
@@ -331,5 +550,6 @@
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    bindStageInteraction,
   });
 })();
