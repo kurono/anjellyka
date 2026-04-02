@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anjellyka</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="panel">
+      <div class="panel-header">
+        <p class="eyebrow">Verlet Soft Body Playground</p>
+        <h1>Anjellyka</h1>
+        <p class="lede">Draw a loop or spawn a preset, then drag the mesh around and tune the forces live.</p>
+      </div>
+
+      <section class="card">
+        <h2>Body</h2>
+        <label class="control">
+          <span>Preset</span>
+          <select id="preset">
+            <option value="circle">Circle</option>
+            <option value="box">Box</option>
+            <option value="capsule">Capsule</option>
+            <option value="star">Star</option>
+            <option value="heart">Heart</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>Body Size</span>
+          <input id="bodySize" type="range" min="90" max="210" step="1" value="150">
+          <output for="bodySize"></output>
+        </label>
+        <label class="control">
+          <span>Mesh Spacing</span>
+          <input id="spacing" type="range" min="14" max="34" step="1" value="22">
+          <output for="spacing"></output>
+        </label>
+        <label class="toggle">
+          <input id="spawnSizeVariation" type="checkbox">
+          <span>Spawn size variation (+/- 20%)</span>
+        </label>
+        <div class="button-row">
+          <button id="spawnPreset" type="button">Spawn Preset</button>
+          <button id="drawMode" type="button">Draw Shape</button>
+          <button id="removeMode" class="danger-action" type="button">Remove Shape</button>
+          <button id="clearBody" type="button">Clear All</button>
+        </div>
+        <p id="modeHint" class="hint">Preset mode: each spawn appends a new body to the scene.</p>
+      </section>
+
+      <section class="card">
+        <h2>Simulation</h2>
+        <label class="control">
+          <span>Gravity X</span>
+          <input id="gravityX" type="range" min="-1200" max="1200" step="10" value="0">
+          <output for="gravityX"></output>
+        </label>
+        <label class="control">
+          <span>Gravity Y</span>
+          <input id="gravityY" type="range" min="-1200" max="2200" step="10" value="980">
+          <output for="gravityY"></output>
+        </label>
+        <label class="control">
+          <span>Wind X</span>
+          <input id="windX" type="range" min="-1600" max="1600" step="10" value="0">
+          <output for="windX"></output>
+        </label>
+        <label class="control">
+          <span>Wind Y</span>
+          <input id="windY" type="range" min="-600" max="600" step="10" value="0">
+          <output for="windY"></output>
+        </label>
+        <label class="control">
+          <span>Constraint Stiffness</span>
+          <input id="stiffness" type="range" min="0.35" max="1" step="0.01" value="0.88">
+          <output for="stiffness"></output>
+        </label>
+        <label class="control">
+          <span>Pressure</span>
+          <input id="pressure" type="range" min="0" max="1.25" step="0.01" value="0.44">
+          <output for="pressure"></output>
+        </label>
+        <label class="control">
+          <span>Damping</span>
+          <input id="drag" type="range" min="0.9" max="0.999" step="0.001" value="0.992">
+          <output for="drag"></output>
+        </label>
+        <label class="control">
+          <span>Collision Bounce</span>
+          <input id="bounce" type="range" min="0" max="0.95" step="0.01" value="0.35">
+          <output for="bounce"></output>
+        </label>
+        <label class="control">
+          <span>Solver Iterations</span>
+          <input id="iterations" type="range" min="4" max="20" step="1" value="10">
+          <output for="iterations"></output>
+        </label>
+        <label class="control">
+          <span>Substeps</span>
+          <input id="substeps" type="range" min="2" max="6" step="1" value="3">
+          <output for="substeps"></output>
+        </label>
+        <label class="control">
+          <span>Collision Passes</span>
+          <input id="collisionPasses" type="range" min="1" max="6" step="1" value="3">
+          <output for="collisionPasses"></output>
+        </label>
+        <div class="button-row">
+          <button id="togglePause" type="button">Pause</button>
+          <button id="resetBody" type="button">Reset Bodies</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>View</h2>
+        <label class="toggle">
+          <input id="showMesh" type="checkbox">
+          <span>Show mesh</span>
+        </label>
+        <label class="toggle">
+          <input id="showNodes" type="checkbox">
+          <span>Show nodes</span>
+        </label>
+        <p id="stats" class="hint">No bodies loaded.</p>
+      </section>
+    </aside>
+
+    <main class="stage-wrap">
+      <div class="stage-head">
+        <div>
+          <p class="stage-title">WebGL Canvas</p>
+          <p class="stage-subtitle">Spawn several bodies, grab any one of them, or switch to draw mode and sketch a closed loop.</p>
+        </div>
+        <div class="stage-tools">
+          <p id="fpsMeter" class="fps-meter">FPS 0.0</p>
+          <div class="legend">
+          <span><i class="chip chip-body"></i>body</span>
+          <span><i class="chip chip-draft"></i>draw preview</span>
+          <span><i class="chip chip-grab"></i>grab point</span>
+          </div>
+        </div>
+      </div>
+      <canvas id="simCanvas"></canvas>
+    </main>
+  </div>
+
+  <script src="src/core/bootstrap.js" defer></script>
+  <script src="src/math/geometry.js" defer></script>
+  <script src="src/physics/point.js" defer></script>
+  <script src="src/physics/soft-body.js" defer></script>
+  <script src="src/physics/collisions.js" defer></script>
+  <script src="src/bodies/factory.js" defer></script>
+  <script src="src/ui/controls.js" defer></script>
+  <script src="src/app/scene.js" defer></script>
+  <script src="src/ui/interaction.js" defer></script>
+  <script src="src/render/canvas.js" defer></script>
+  <script src="src/app/main.js" defer></script>
+</body>
+</html>
