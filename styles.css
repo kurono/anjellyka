@@ -314,6 +314,8 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 980px) {
   .app-shell {
     height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
     grid-template-columns: 1fr;
   }
 
@@ -328,8 +330,10 @@ input[type="range"]::-moz-range-thumb {
   }
 
   #simCanvas {
-    min-height: 52vh;
-    height: auto;
+    flex: none;
+    height: 52vh;
+    height: 52svh;
+    min-height: 320px;
   }
 
   .stage-head {

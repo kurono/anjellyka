@@ -73,7 +73,6 @@
     canvas.getContext("webgl", {
       alpha: false,
       antialias: true,
-      desynchronized: true,
       premultipliedAlpha: true,
     }) || canvas.getContext("experimental-webgl");
 

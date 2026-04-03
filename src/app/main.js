@@ -94,8 +94,6 @@
    * @param {number} time High-resolution timestamp from `requestAnimationFrame`.
    */
   function frame(time) {
-    resizeCanvas();
-
     const frameDelta = state.lastFrameTime
       ? Math.max(1 / 1000, (time - state.lastFrameTime) / 1000)
       : state.fixedStep;
@@ -119,6 +117,24 @@
     drawDraft();
     drawHoverTarget();
     requestAnimationFrame(frame);
+  }
+
+  let resizeScheduled = false;
+
+  /**
+   * Coalesces layout-driven stage resizes into one update per animation frame.
+   */
+  function scheduleCanvasResize() {
+    if (resizeScheduled) {
+      return;
+    }
+
+    resizeScheduled = true;
+    requestAnimationFrame(() => {
+      resizeScheduled = false;
+      resizeCanvas();
+      updateCanvasCursor();
+    });
   }
 
   Object.values(controls).forEach((element) => {
@@ -152,10 +168,19 @@
   bindStageInteraction();
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
-  window.addEventListener("resize", () => {
-    resizeCanvas();
-    updateCanvasCursor();
-  });
+  window.addEventListener("resize", scheduleCanvasResize);
+  window.addEventListener("orientationchange", scheduleCanvasResize);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", scheduleCanvasResize);
+  }
+
+  if (typeof ResizeObserver !== "undefined") {
+    const stageResizeObserver = new ResizeObserver(() => {
+      scheduleCanvasResize();
+    });
+    stageResizeObserver.observe(canvas);
+  }
 
   Object.assign(app, { update, frame });
 

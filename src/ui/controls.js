@@ -70,10 +70,11 @@
    * @returns {boolean} Whether the canvas dimensions changed.
    */
   function resizeCanvas() {
-    const stage = canvas.getBoundingClientRect();
     const scale = window.devicePixelRatio || 1;
-    const width = Math.max(1, Math.round(stage.width * scale));
-    const height = Math.max(1, Math.round(stage.height * scale));
+    const cssWidth = Math.max(1, canvas.clientWidth || canvas.offsetWidth || 0);
+    const cssHeight = Math.max(1, canvas.clientHeight || canvas.offsetHeight || 0);
+    const width = Math.max(1, Math.round(cssWidth * scale));
+    const height = Math.max(1, Math.round(cssHeight * scale));
 
     if (canvas.width === width && canvas.height === height) {
       return false;

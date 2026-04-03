@@ -25,7 +25,6 @@
     createBodyFactoryFromPolygon,
     addBody,
     removeBody,
-    setMode,
     clearGrab,
     updateCanvasCursor,
   } = app;
@@ -314,7 +313,6 @@
 
     state.nextColorIndex += 1;
     addBody(createBodyFactoryFromPolygon(path, state.settings.spacing, reservedColor));
-    setMode("preset");
   }
 
   /**
